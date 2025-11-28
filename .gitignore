@@ -1,0 +1,76 @@
+#-------------------------
+# Environment Files
+#-------------------------
+.env
+.vagrant
+Vagrantfile
+
+#-------------------------
+# Temporary Files
+#-------------------------
+writable/cache/*
+!writable/cache/index.html
+
+writable/logs/*
+!writable/logs/index.html
+
+writable/session/*
+!writable/session/index.html
+
+writable/uploads/*
+!writable/uploads/index.html
+
+writable/debugbar/*
+
+php_errors.log
+
+#-------------------------
+# Composer
+#-------------------------
+vendor/
+composer.lock
+
+#-------------------------
+# IDE Files
+#-------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+#-------------------------
+# OS Files
+#-------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+#-------------------------
+# Node Modules
+#-------------------------
+node_modules/
+
+#-------------------------
+# Uploads & User Files
+#-------------------------
+public/uploads/*
+!public/uploads/.htaccess
+
+uploads/*
+!uploads/.htaccess
+
+#-------------------------
+# Database Backups
+#-------------------------
+*.sql
+!database/schema.sql
+*.sqlite
+*.db
+
+#-------------------------
+# Sensitive Data
+#-------------------------
+*.pem
+*.key
+*.cert
