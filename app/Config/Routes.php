@@ -92,3 +92,8 @@ $routes->get('poster', 'Dashboard::poster');
 $routes->get('pamflet', 'Dashboard::pamflet');
 $routes->get('kategori/poster', 'Kategori::poster');
 $routes->get('kategori/pamflet', 'Kategori::pamflet');
+
+
+// Review Routes
+$routes->post('review/submit', 'Review::submit');
+$routes->post('review/helpful/(:num)', 'Review::helpful/$1');

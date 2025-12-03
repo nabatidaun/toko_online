@@ -181,9 +181,14 @@ class Dashboard extends BaseController
 
     public function detail($id_brg)
     {
+        $reviewModel = new \App\Models\Model_review();
+        
         $data = [
             'title' => 'Detail Produk',
-            'barang' => $this->barangModel->detail_brg($id_brg)
+            'barang' => $this->barangModel->detail_brg($id_brg),
+            'reviews' => $reviewModel->getReviewsByProduct($id_brg),
+            'rating_summary' => $reviewModel->getAverageRating($id_brg),
+            'rating_distribution' => $reviewModel->getRatingDistribution($id_brg)
         ];
 
         if (!$data['barang']) {

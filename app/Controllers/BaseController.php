@@ -12,6 +12,7 @@ use App\Models\Model_barang;
 use App\Models\Model_invoice;
 use App\Models\Model_kategori;
 use App\Models\Model_analytics;
+use App\Models\Model_review;
 
 abstract class BaseController extends Controller
 {
@@ -22,6 +23,7 @@ abstract class BaseController extends Controller
     protected $invoiceModel;
     protected $kategoriModel;
     protected $analyticsModel;
+    protected $reviewModel;
     protected $db;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
@@ -33,6 +35,7 @@ abstract class BaseController extends Controller
         $this->invoiceModel = new Model_invoice();
         $this->kategoriModel = new Model_kategori();
         $this->analyticsModel = new Model_analytics();
+        $this->reviewModel = new \App\Models\Model_review();
         
         // Autoload Database
         $this->db = \Config\Database::connect();

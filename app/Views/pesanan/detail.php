@@ -342,4 +342,137 @@
             </table>
         </div>
     </div>
+
+    <?php if ($invoice['status'] == 'selesai' && $invoice['konfirmasi_user'] == 1): ?>
+    <!-- Review Section -->
+    <div class="card mt-4">
+        <div class="card-header bg-warning text-white">
+            <h5 class="mb-0"><i class="fas fa-star"></i> Berikan Review Produk</h5>
+        </div>
+        <div class="card-body">
+            <?php
+            $reviewModel = new \App\Models\Model_review();
+            $user_id = session()->get('user_id') ?? 1; // Temporary until auth implemented
+            ?>
+            
+            <?php foreach ($pesanan as $psn): ?>
+                <?php
+                $hasReviewed = $reviewModel->hasUserReviewed($user_id, $psn['id_brg']);
+                ?>
+                
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6><?= esc($psn['nama_brg']) ?></h6>
+                            </div>
+                            <div class="col-md-4 text-right">
+                                <?php if ($hasReviewed): ?>
+                                    <span class="badge badge-success">
+                                        <i class="fas fa-check"></i> Sudah Direview
+                                    </span>
+                                <?php else: ?>
+                                    <button class="btn btn-sm btn-warning" 
+                                            data-toggle="modal" 
+                                            data-target="#reviewModal<?= $psn['id_brg'] ?>">
+                                        <i class="fas fa-star"></i> Tulis Review
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <?php if (!$hasReviewed): ?>
+                    <!-- Review Modal -->
+                    <div class="modal fade" id="reviewModal<?= $psn['id_brg'] ?>" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-white">
+                                    <h5 class="modal-title">Review: <?= esc($psn['nama_brg']) ?></h5>
+                                    <button type="button" class="close text-white" data-dismiss="modal">
+                                        <span>&times;</span>
+                                    </button>
+                                </div>
+                                <form action="<?= base_url('review/submit') ?>" method="post">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="product_id" value="<?= $psn['id_brg'] ?>">
+                                    <input type="hidden" name="invoice_id" value="<?= $invoice['id'] ?>">
+                                    
+                                    <div class="modal-body">
+                                        <!-- Rating Stars -->
+                                        <div class="form-group">
+                                            <label><strong>Rating:</strong></label>
+                                            <div class="rating-input">
+                                                <input type="radio" name="rating" value="5" id="star5-<?= $psn['id_brg'] ?>" required>
+                                                <label for="star5-<?= $psn['id_brg'] ?>">★</label>
+                                                
+                                                <input type="radio" name="rating" value="4" id="star4-<?= $psn['id_brg'] ?>">
+                                                <label for="star4-<?= $psn['id_brg'] ?>">★</label>
+                                                
+                                                <input type="radio" name="rating" value="3" id="star3-<?= $psn['id_brg'] ?>">
+                                                <label for="star3-<?= $psn['id_brg'] ?>">★</label>
+                                                
+                                                <input type="radio" name="rating" value="2" id="star2-<?= $psn['id_brg'] ?>">
+                                                <label for="star2-<?= $psn['id_brg'] ?>">★</label>
+                                                
+                                                <input type="radio" name="rating" value="1" id="star1-<?= $psn['id_brg'] ?>">
+                                                <label for="star1-<?= $psn['id_brg'] ?>">★</label>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Comment -->
+                                        <div class="form-group">
+                                            <label><strong>Komentar:</strong></label>
+                                            <textarea name="comment" 
+                                                    class="form-control" 
+                                                    rows="4" 
+                                                    placeholder="Ceritakan pengalaman Anda dengan produk ini... (minimal 10 karakter)"
+                                                    required
+                                                    minlength="10"
+                                                    maxlength="500"></textarea>
+                                            <small class="text-muted">Minimal 10 karakter, maksimal 500 karakter</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="fas fa-paper-plane"></i> Kirim Review
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+    <style>
+    /* Star Rating CSS */
+    .rating-input {
+        direction: rtl;
+        display: inline-flex;
+        font-size: 2rem;
+    }
+
+    .rating-input input[type="radio"] {
+        display: none;
+    }
+
+    .rating-input label {
+        color: #ddd;
+        cursor: pointer;
+        padding: 0 5px;
+    }
+
+    .rating-input label:hover,
+    .rating-input label:hover ~ label,
+    .rating-input input[type="radio"]:checked ~ label {
+        color: #ffc107;
+    }
+    </style>
 </div>
