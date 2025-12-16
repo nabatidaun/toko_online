@@ -181,35 +181,43 @@
                         <div class="topbar-divider d-none d-sm-block"></div>
 
                         <!-- Nav Item - User Information -->
-                        <li class="nav-item dropdown no-arrow">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">Nino</span>
-                                <img class="img-profile rounded-circle"
-                                    src="<?php echo base_url() ?>assets/img/cyrene.jpg">
-                            </a>
-                            <!-- Dropdown - User Information -->
-                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                aria-labelledby="userDropdown">
-                                <a class="dropdown-item" href="#">
-                                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Profile
+                        <?php if (session()->get('logged_in')): ?>
+                            <li class="nav-item dropdown no-arrow">
+                                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" 
+                                role="button" data-toggle="dropdown">
+                                    <span class="mr-2 d-none d-lg-inline text-gray-600 small">
+                                        <?= esc(session()->get('nama')) ?>
+                                    </span>
+                                    <img class="img-profile rounded-circle" src="<?= base_url('assets/img/user.png') ?>">
                                 </a>
-                                <a class="dropdown-item" href="#">
-                                    <i class="fas fa-cogs fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Settings
+                                <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in">
+                                    <a class="dropdown-item" href="<?= base_url('profile') ?>">
+                                        <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i> Profile
+                                    </a>
+                                    <a class="dropdown-item" href="<?= base_url('pesanan') ?>">
+                                        <i class="fas fa-shopping-bag fa-sm fa-fw mr-2 text-gray-400"></i> Pesanan
+                                    </a>
+                                    <a class="dropdown-item" href="<?= base_url('wishlist') ?>">
+                                        <i class="fas fa-heart fa-sm fa-fw mr-2 text-gray-400"></i> Wishlist
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="<?= base_url('auth/logout') ?>">
+                                        <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i> Logout
+                                    </a>
+                                </div>
+                            </li>
+                        <?php else: ?>
+                            <li class="nav-item">
+                                <a class="nav-link" href="<?= base_url('auth/login') ?>">
+                                    <i class="fas fa-sign-in-alt"></i> Login
                                 </a>
-                                <a class="dropdown-item" href="#">
-                                    <i class="fas fa-list fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Activity Log
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="<?= base_url('auth/register') ?>">
+                                    <i class="fas fa-user-plus"></i> Register
                                 </a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
-                                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Logout
-                                </a>
-                            </div>
-                        </li>
+                            </li>
+                        <?php endif; ?>
 
                     </ul>
 
