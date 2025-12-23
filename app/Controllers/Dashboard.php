@@ -12,11 +12,38 @@ class Dashboard extends BaseController
 
     public function __construct()
     {
-        $this->session = session();
+        $this->session = \Config\Services::session();
         $this->barangModel = new Model_barang();
         
-        // Load cart library
-        helper(['cart', 'form', 'url']);
+        helper(['form', 'url']);
+    }
+    
+    /**
+     * Get cart data from session
+     */
+    private function getCart()
+    {
+        return $this->session->get('cart') ?? [];
+    }
+    
+    /**
+     * Save cart to session
+     */
+    private function saveCart($cart)
+    {
+        $this->session->set('cart', $cart);
+    }
+    
+    /**
+     * Calculate cart total
+     */
+    private function calculateTotal($cart)
+    {
+        $total = 0;
+        foreach ($cart as $item) {
+            $total += ($item['harga'] * $item['qty']);
+        }
+        return $total;
     }
 
     /**
@@ -24,6 +51,8 @@ class Dashboard extends BaseController
      */
     public function index()
     {
+        $cart = $this->getCart();
+        
         $data['title'] = 'Dashboard';
         $data['barang'] = $this->barangModel->findAll();
         
@@ -32,8 +61,7 @@ class Dashboard extends BaseController
         $data['user_name'] = $this->session->get('nama');
         
         // Hitung total keranjang
-        $cart = \Config\Services::cart();
-        $data['total_item'] = count($cart->contents());
+        $data['total_item'] = count($cart);
         
         echo view('templates/header', $data);
         echo view('templates/sidebar', $data);
@@ -63,6 +91,12 @@ class Dashboard extends BaseController
             ->limit(4)
             ->findAll();
         
+        // Get reviews
+        $reviewModel = new \App\Models\Model_review();
+        $data['reviews'] = $reviewModel->getReviewsByProduct($id_brg);
+        $data['rating_summary'] = $reviewModel->getAverageRating($id_brg);
+        $data['rating_distribution'] = $reviewModel->getRatingDistribution($id_brg);
+        
         echo view('templates/header', $data);
         echo view('templates/sidebar', $data);
         echo view('detail_barang', $data);
@@ -74,13 +108,9 @@ class Dashboard extends BaseController
      */
     public function tambah_ke_keranjang($id)
     {
-        // ============================================
-        // CEK LOGIN - FITUR UTAMA AUTH
-        // ============================================
+        // CEK LOGIN
         if (!$this->session->get('logged_in')) {
-            // Simpan URL tujuan untuk redirect setelah login
             $this->session->set('redirect_url', current_url());
-            
             return redirect()->to(base_url('auth/login'))
                 ->with('error', 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.');
         }
@@ -97,11 +127,12 @@ class Dashboard extends BaseController
             return redirect()->back()->with('error', 'Stok produk habis!');
         }
 
-        $cart = \Config\Services::cart();
+        // Get cart from session
+        $cart = $this->getCart();
         
         // Check if item already in cart
         $existing = false;
-        foreach ($cart->contents() as $item) {
+        foreach ($cart as $key => $item) {
             if ($item['id'] == $id) {
                 $existing = true;
                 $newQty = $item['qty'] + 1;
@@ -111,30 +142,26 @@ class Dashboard extends BaseController
                     return redirect()->back()->with('error', 'Jumlah melebihi stok yang tersedia!');
                 }
                 
-                $cart->update([
-                    'rowid' => $item['rowid'],
-                    'qty' => $newQty
-                ]);
+                $cart[$key]['qty'] = $newQty;
                 break;
             }
         }
 
-        // If not exists, insert new item
+        // If not exists, add new item
         if (!$existing) {
-            $data = [
-                'id'      => $barang['id_brg'],
-                'qty'     => 1,
-                'price'   => $barang['harga'],
-                'name'    => $barang['nama_brg'],
-                'options' => [
-                    'gambar' => $barang['gambar'],
-                    'kategori' => $barang['kategori'],
-                    'stock' => $barang['stock']
-                ]
+            $cart[] = [
+                'id' => $barang['id_brg'],
+                'nama' => $barang['nama_brg'],
+                'qty' => 1,
+                'harga' => $barang['harga'],
+                'gambar' => $barang['gambar'],
+                'kategori' => $barang['kategori'],
+                'stock' => $barang['stock']
             ];
-
-            $cart->insert($data);
         }
+        
+        // Save cart to session
+        $this->saveCart($cart);
 
         return redirect()->to(base_url('dashboard/keranjang'))
             ->with('success', 'Produk berhasil ditambahkan ke keranjang!');
@@ -142,6 +169,7 @@ class Dashboard extends BaseController
 
     /**
      * Lihat Keranjang - HARUS LOGIN
+     * INI YANG DIPERBAIKI - Return VIEW bukan JSON
      */
     public function keranjang()
     {
@@ -151,30 +179,45 @@ class Dashboard extends BaseController
                 ->with('error', 'Silakan login untuk melihat keranjang.');
         }
 
-        $cart = \Config\Services::cart();
+        $cart = $this->getCart();
         
-        $data['title'] = 'Keranjang Belanja';
-        $data['cart_items'] = $cart->contents();
-        $data['total'] = $cart->total();
-        $data['total_items'] = count($cart->contents());
+        $data = [
+            'title' => 'Keranjang Belanja',
+            'cart' => $cart,
+            'total' => $this->calculateTotal($cart),
+            'total_items' => count($cart)
+        ];
 
-        echo view('templates/header', $data);
-        echo view('templates/sidebar', $data);
-        echo view('keranjang', $data);
-        echo view('templates/footer');
+        // RETURN VIEW - bukan JSON
+        return view('templates/header', $data)
+            . view('templates/sidebar', $data)
+            . view('keranjang', $data)
+            . view('templates/footer');
     }
 
     /**
      * Hapus Item dari Keranjang
      */
-    public function hapus_item($rowid)
+    public function hapus_item($id)
     {
         if (!$this->session->get('logged_in')) {
             return redirect()->to(base_url('auth/login'));
         }
 
-        $cart = \Config\Services::cart();
-        $cart->remove($rowid);
+        $cart = $this->getCart();
+        
+        // Hapus item berdasarkan ID
+        foreach ($cart as $key => $item) {
+            if ($item['id'] == $id) {
+                unset($cart[$key]);
+                break;
+            }
+        }
+        
+        // Re-index array
+        $cart = array_values($cart);
+        
+        $this->saveCart($cart);
 
         return redirect()->to(base_url('dashboard/keranjang'))
             ->with('success', 'Item berhasil dihapus dari keranjang!');
@@ -189,8 +232,7 @@ class Dashboard extends BaseController
             return redirect()->to(base_url('auth/login'));
         }
 
-        $cart = \Config\Services::cart();
-        $cart->destroy();
+        $this->session->remove('cart');
 
         return redirect()->to(base_url('dashboard/keranjang'))
             ->with('success', 'Keranjang berhasil dikosongkan!');
@@ -205,47 +247,37 @@ class Dashboard extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
         }
 
-        $rowid = $this->request->getPost('rowid');
+        $id = $this->request->getPost('id');
         $qty = $this->request->getPost('qty');
 
         if ($qty < 1) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Jumlah minimal 1']);
         }
 
-        $cart = \Config\Services::cart();
+        $cart = $this->getCart();
         
-        // Get item to check stock
-        $item = null;
-        foreach ($cart->contents() as $cartItem) {
-            if ($cartItem['rowid'] == $rowid) {
-                $item = $cartItem;
+        // Update item quantity
+        foreach ($cart as $key => $item) {
+            if ($item['id'] == $id) {
+                // Check stock
+                $barang = $this->barangModel->find($id);
+                if ($qty > $barang['stock']) {
+                    return $this->response->setJSON([
+                        'status' => 'error', 
+                        'message' => 'Stok tidak mencukupi! Stok tersedia: ' . $barang['stock']
+                    ]);
+                }
+                
+                $cart[$key]['qty'] = $qty;
                 break;
             }
         }
-
-        if (!$item) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Item tidak ditemukan']);
-        }
-
-        // Check stock
-        $barang = $this->barangModel->find($item['id']);
-        if ($qty > $barang['stock']) {
-            return $this->response->setJSON([
-                'status' => 'error', 
-                'message' => 'Stok tidak mencukupi! Stok tersedia: ' . $barang['stock']
-            ]);
-        }
-
-        // Update cart
-        $cart->update([
-            'rowid' => $rowid,
-            'qty' => $qty
-        ]);
+        
+        $this->saveCart($cart);
 
         return $this->response->setJSON([
             'status' => 'success',
-            'subtotal' => number_format($item['price'] * $qty, 0, ',', '.'),
-            'total' => number_format($cart->total(), 0, ',', '.')
+            'total' => number_format($this->calculateTotal($cart), 0, ',', '.')
         ]);
     }
 
@@ -259,26 +291,26 @@ class Dashboard extends BaseController
                 ->with('error', 'Silakan login untuk checkout.');
         }
 
-        $cart = \Config\Services::cart();
+        $cart = $this->getCart();
         
         // Cek keranjang kosong
-        if (count($cart->contents()) == 0) {
+        if (count($cart) == 0) {
             return redirect()->to(base_url('dashboard'))
                 ->with('error', 'Keranjang belanja Anda kosong!');
         }
 
         // Validasi stock sebelum checkout
-        foreach ($cart->contents() as $item) {
+        foreach ($cart as $item) {
             $barang = $this->barangModel->find($item['id']);
             if (!$barang || $barang['stock'] < $item['qty']) {
                 return redirect()->to(base_url('dashboard/keranjang'))
-                    ->with('error', 'Stok produk "' . $item['name'] . '" tidak mencukupi!');
+                    ->with('error', 'Stok produk "' . $item['nama'] . '" tidak mencukupi!');
             }
         }
 
         $data['title'] = 'Pembayaran';
-        $data['cart_items'] = $cart->contents();
-        $data['total'] = $cart->total();
+        $data['cart_items'] = $cart;
+        $data['total'] = $this->calculateTotal($cart);
         
         // Get user data untuk auto-fill
         $data['user'] = [
@@ -286,10 +318,88 @@ class Dashboard extends BaseController
             'email' => $this->session->get('email')
         ];
 
-        echo view('templates/header', $data);
-        echo view('templates/sidebar', $data);
-        echo view('pembayaran', $data);
-        echo view('templates/footer');
+        return view('templates/header', $data)
+            . view('templates/sidebar', $data)
+            . view('pembayaran', $data)
+            . view('templates/footer');
+    }
+
+    /**
+     * Proses Pesanan - Create Invoice
+     */
+    public function proses_pesanan()
+    {
+        if (!$this->session->get('logged_in')) {
+            return redirect()->to(base_url('auth/login'));
+        }
+
+        $cart = $this->getCart();
+        
+        if (count($cart) == 0) {
+            return redirect()->to(base_url('dashboard'))
+                ->with('error', 'Keranjang kosong!');
+        }
+
+        // Get form data
+        $nama = $this->request->getPost('nama');
+        $alamat = $this->request->getPost('alamat');
+        $payment_method = $this->request->getPost('payment_method') ?? 'midtrans';
+
+        // Create invoice
+        $invoiceModel = new Model_invoice();
+        
+        $total = $this->calculateTotal($cart);
+        
+        $invoiceData = [
+            'nama' => $nama,
+            'alamat' => $alamat,
+            'tgl_pesan' => date('Y-m-d H:i:s'),
+            'batas_bayar' => date('Y-m-d H:i:s', strtotime('+1 day')),
+            'status' => 'pending',
+            'payment_type' => $payment_method,
+            'payment_status' => 'pending',
+            'gross_amount' => $total
+        ];
+
+        $invoiceId = $invoiceModel->insert($invoiceData);
+
+        if ($invoiceId) {
+            // Insert order items
+            $pesananModel = new \App\Models\Model_pesanan();
+            
+            foreach ($cart as $item) {
+                $pesananModel->insert([
+                    'id_invoice' => $invoiceId,
+                    'id_brg' => $item['id'],
+                    'nama_brg' => $item['nama'],
+                    'jumlah' => $item['qty'],
+                    'harga' => $item['harga'],
+                    'pilihan' => ''
+                ]);
+            }
+
+            // Clear cart
+            $this->session->remove('cart');
+
+            // Redirect to payment
+            return redirect()->to(base_url('payment/process/' . $invoiceId))
+                ->with('success', 'Pesanan berhasil dibuat! Silakan lakukan pembayaran.');
+        }
+
+        return redirect()->back()->with('error', 'Gagal membuat pesanan!');
+    }
+    
+    /**
+     * Detail Keranjang untuk AJAX - Return JSON
+     */
+    public function detail_keranjang()
+    {
+        $cart = $this->getCart();
+        return $this->response->setJSON([
+            'items' => $cart,
+            'total' => $this->calculateTotal($cart),
+            'count' => count($cart)
+        ]);
     }
 
     /**
@@ -316,14 +426,14 @@ class Dashboard extends BaseController
         $data['barang'] = $builder->findAll();
         $data['is_logged_in'] = $this->session->get('logged_in') ? true : false;
         
-        echo view('templates/header', $data);
-        echo view('templates/sidebar', $data);
-        echo view('dashboard', $data);
-        echo view('templates/footer');
+        return view('templates/header', $data)
+            . view('templates/sidebar', $data)
+            . view('dashboard', $data)
+            . view('templates/footer');
     }
 
     /**
-     * Filter by Category
+     * Filter by Category - Poster
      */
     public function poster()
     {
@@ -331,22 +441,25 @@ class Dashboard extends BaseController
         $data['barang'] = $this->barangModel->where('kategori', 'poster')->findAll();
         $data['is_logged_in'] = $this->session->get('logged_in') ? true : false;
         
-        echo view('templates/header', $data);
-        echo view('templates/sidebar', $data);
-        echo view('dashboard', $data);
-        echo view('templates/footer');
+        return view('templates/header', $data)
+            . view('templates/sidebar', $data)
+            . view('dashboard', $data)
+            . view('templates/footer');
     }
 
+    /**
+     * Filter by Category - Pamflet
+     */
     public function pamflet()
     {
         $data['title'] = 'Pamflet';
         $data['barang'] = $this->barangModel->where('kategori', 'pamflet')->findAll();
         $data['is_logged_in'] = $this->session->get('logged_in') ? true : false;
         
-        echo view('templates/header', $data);
-        echo view('templates/sidebar', $data);
-        echo view('dashboard', $data);
-        echo view('templates/footer');
+        return view('templates/header', $data)
+            . view('templates/sidebar', $data)
+            . view('dashboard', $data)
+            . view('templates/footer');
     }
 
     /**
@@ -354,71 +467,8 @@ class Dashboard extends BaseController
      */
     public function cart_count()
     {
-        $cart = \Config\Services::cart();
         return $this->response->setJSON([
-            'count' => count($cart->contents())
+            'count' => count($this->getCart())
         ]);
-    }
-
-    /**
-     * Proses Pesanan - Create Invoice
-     */
-    public function proses_pesanan()
-    {
-        if (!$this->session->get('logged_in')) {
-            return redirect()->to(base_url('auth/login'));
-        }
-
-        $cart = \Config\Services::cart();
-        
-        if (count($cart->contents()) == 0) {
-            return redirect()->to(base_url('dashboard'))
-                ->with('error', 'Keranjang kosong!');
-        }
-
-        // Get form data
-        $nama = $this->request->getPost('nama');
-        $alamat = $this->request->getPost('alamat');
-
-        // Create invoice
-        $invoiceModel = new Model_invoice();
-        
-        $invoiceData = [
-            'nama' => $nama,
-            'alamat' => $alamat,
-            'tgl_pesan' => date('Y-m-d H:i:s'),
-            'batas_bayar' => date('Y-m-d H:i:s', strtotime('+1 day')),
-            'status' => 'pending',
-            'payment_type' => 'midtrans',
-            'payment_status' => 'pending',
-            'gross_amount' => $cart->total()
-        ];
-
-        $invoiceId = $invoiceModel->insert($invoiceData);
-
-        if ($invoiceId) {
-            // Insert order items
-            $pesananModel = new \App\Models\Model_pesanan();
-            
-            foreach ($cart->contents() as $item) {
-                $pesananModel->insert([
-                    'id_invoice' => $invoiceId,
-                    'id_brg' => $item['id'],
-                    'nama_brg' => $item['name'],
-                    'jumlah' => $item['qty'],
-                    'harga' => $item['price'],
-                    'pilihan' => ''
-                ]);
-            }
-
-            // Clear cart
-            $cart->destroy();
-
-            // Redirect to payment
-            return redirect()->to(base_url('payment/process/' . $invoiceId))
-                ->with('success', 'Pesanan berhasil dibuat! Silakan lakukan pembayaran.');
-        }
-
-        return redirect()->back()->with('error', 'Gagal membuat pesanan!');
     }
 }

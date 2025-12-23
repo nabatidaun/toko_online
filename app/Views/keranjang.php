@@ -6,7 +6,7 @@
             <th>NO</th>
             <th>Nama Produk</th>
             <th>Jumlah</th>
-            <th>harga</th>
+            <th>Harga</th>
             <th>Sub-Total</th>
             <th>Aksi</th>
         </tr>
@@ -25,7 +25,8 @@
                     <td align="right">Rp. <?= number_format($item['harga'] * $item['qty'], 0, ',', '.') ?></td>
                     <td>
                         <a href="<?= base_url('dashboard/hapus_item/' . $item['id']) ?>" 
-                           class="btn btn-sm btn-danger">
+                           class="btn btn-sm btn-danger"
+                           onclick="return confirm('Hapus item ini?')">
                             Hapus
                         </a>
                     </td>
@@ -34,8 +35,9 @@
             <?php endforeach; ?>
 
             <tr>
-                <td colspan="4"></td>
-                <td align="right">Rp. <?= number_format($total, 0, ',', '.') ?></strong></td>
+                <td colspan="4" align="right"><strong>TOTAL</strong></td>
+                <td align="right"><strong>Rp. <?= number_format($total, 0, ',', '.') ?></strong></td>
+                <td></td>
             </tr>
 
         <?php else: ?>
@@ -47,11 +49,17 @@
     </table>
 
     <div align="right">
-        <a href="<?= base_url('dashboard/hapus_semua') ?>"><div 
-        class="btn btn-sm btn-danger">Hapus Keranjang</div></a>
-        <a href="<?= base_url('dashboard') ?>"><div 
-        class="btn btn-sm btn-primary">Lanjutkan Belanja</div></a>
-        <a href="<?= base_url('dashboard/pembayaran') ?>"><div 
-        class="btn btn-sm btn-success">Pembayaran</div></a>
+        <a href="<?= base_url('dashboard/hapus_semua') ?>" 
+           onclick="return confirm('Kosongkan semua keranjang?')">
+            <div class="btn btn-sm btn-danger">Hapus Keranjang</div>
+        </a>
+        <a href="<?= base_url('dashboard') ?>">
+            <div class="btn btn-sm btn-primary">Lanjutkan Belanja</div>
+        </a>
+        <?php if (!empty($cart)): ?>
+            <a href="<?= base_url('dashboard/pembayaran') ?>">
+                <div class="btn btn-sm btn-success">Pembayaran</div>
+            </a>
+        <?php endif; ?>
     </div>
 </div>

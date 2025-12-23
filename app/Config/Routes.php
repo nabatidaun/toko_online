@@ -13,7 +13,7 @@ $routes->setDefaultController('Dashboard');
 $routes->setDefaultMethod('index');
 $routes->setTranslateURIDashes(false);
 $routes->set404Override();
-$routes->setAutoRoute(false); // UBAH KE FALSE UNTUK KEAMANAN
+$routes->setAutoRoute(false);
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +23,7 @@ $routes->setAutoRoute(false); // UBAH KE FALSE UNTUK KEAMANAN
 $routes->get('/', 'Dashboard::index');
 $routes->get('/dashboard', 'Dashboard::index');
 $routes->get('/dashboard/detail/(:num)', 'Dashboard::detail/$1');
+$routes->get('/dashboard/search', 'Dashboard::search');
 
 /*
 |--------------------------------------------------------------------------
@@ -35,7 +36,7 @@ $routes->group('auth', function($routes) {
     $routes->get('register', 'Auth::register');
     $routes->post('register_process', 'Auth::register_process');
     $routes->get('logout', 'Auth::logout');
-    $routes->get('check_auth', 'Auth::check_auth'); // AJAX check
+    $routes->get('check_auth', 'Auth::check_auth');
     $routes->get('forgot_password', 'Auth::forgot_password');
     $routes->post('reset_password', 'Auth::reset_password');
 });
@@ -48,10 +49,12 @@ $routes->group('auth', function($routes) {
 $routes->group('', ['filter' => 'auth'], function($routes) {
     // Keranjang & Checkout
     $routes->get('dashboard/tambah_ke_keranjang/(:num)', 'Dashboard::tambah_ke_keranjang/$1');
-    $routes->get('dashboard/keranjang', 'Dashboard::keranjang');
+    $routes->get('dashboard/keranjang', 'Dashboard::keranjang'); // HTML VIEW
     $routes->get('dashboard/hapus_item/(:num)', 'Dashboard::hapus_item/$1');
     $routes->get('dashboard/hapus_semua', 'Dashboard::hapus_semua');
-    $routes->get('dashboard/detail_keranjang', 'Dashboard::detail_keranjang');
+    $routes->get('dashboard/detail_keranjang', 'Dashboard::detail_keranjang'); // AJAX JSON
+    $routes->post('dashboard/update_cart', 'Dashboard::update_cart'); // AJAX
+    $routes->get('dashboard/cart_count', 'Dashboard::cart_count'); // AJAX
     $routes->get('dashboard/pembayaran', 'Dashboard::pembayaran');
     $routes->post('dashboard/proses_pesanan', 'Dashboard::proses_pesanan');
     

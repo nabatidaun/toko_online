@@ -14,6 +14,7 @@ use App\Models\Model_kategori;
 use App\Models\Model_analytics;
 use App\Models\Model_review;
 use App\Models\Model_user;
+use App\Models\Model_pesanan;
 
 abstract class BaseController extends Controller
 {
@@ -26,6 +27,7 @@ abstract class BaseController extends Controller
     protected $analyticsModel;
     protected $reviewModel;
     protected $userModel;
+    protected $pesananModel;
     protected $db;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
@@ -39,7 +41,8 @@ abstract class BaseController extends Controller
         $this->analyticsModel = new Model_analytics();
         $this->reviewModel = new Model_review();
         $this->userModel = new Model_user();
-        
+        $this->pesananModel = new Model_pesanan();
+
         // Autoload Database
         $this->db = \Config\Database::connect();
     }
