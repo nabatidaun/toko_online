@@ -16,7 +16,9 @@ class Model_user extends Model
         'no_telp',
         'alamat',
         'status',
-        'remember_token'
+        'remember_token',
+        'foto_profile', // Tambahan untuk foto
+        'last_login'
     ];
     protected $useTimestamps = true;
     protected $createdField = 'created_at';
@@ -74,7 +76,20 @@ class Model_user extends Model
      */
     public function getUserWithAddresses($userId)
     {
-        // Nanti bisa ditambahkan join dengan tabel alamat jika ada
         return $this->find($userId);
+    }
+    
+    /**
+     * Get user profile dengan foto
+     */
+    public function getUserProfile($userId)
+    {
+        $user = $this->find($userId);
+        
+        if ($user && empty($user['foto_profile'])) {
+            $user['foto_profile'] = 'default.png';
+        }
+        
+        return $user;
     }
 }
